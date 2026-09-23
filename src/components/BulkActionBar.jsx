@@ -74,7 +74,7 @@ export function BulkActionBar({
   const hasSelection = selectedIds.length > 0;
 
   return (
-    <div className="action-search-bar animate-fade-in">
+    <div className="action-search-bar animate-fade-in" style={{ position: "relative", zIndex: 40 }}>
       {/* Search Input */}
       <div className="search-field-wrapper">
         <Search size={14} />
@@ -177,7 +177,7 @@ export function BulkActionBar({
         </button>
 
         {/* 3. Export Laporan Dropdown */}
-        <div style={{ position: "relative" }} ref={dropdownRef}>
+        <div style={{ position: "relative", zIndex: 50 }} ref={dropdownRef}>
           <button
             className="btn btn-secondary btn-sm"
             onClick={() => setShowExportMenu(!showExportMenu)}
@@ -196,7 +196,7 @@ export function BulkActionBar({
                 position: "absolute",
                 right: 0,
                 top: "calc(100% + 6px)",
-                zIndex: 50,
+                zIndex: 100,
                 minWidth: "195px",
                 padding: "0.35rem",
                 display: "flex",
@@ -204,8 +204,9 @@ export function BulkActionBar({
                 gap: "0.2rem",
                 borderRadius: "var(--radius-md)",
                 border: "1px solid var(--border-medium)",
-                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.4)",
-                background: "var(--bg-surface-elevated)"
+                boxShadow: "0 12px 30px -4px rgba(0, 0, 0, 0.8), 0 4px 12px rgba(0, 0, 0, 0.5)",
+                background: "#1e2531",
+                opacity: 1
               }}
             >
               <button

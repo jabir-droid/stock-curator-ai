@@ -31,7 +31,7 @@ export function FilterBar({
   ];
 
   return (
-    <div className="filter-container animate-fade-in">
+    <div className="filter-container animate-fade-in" style={{ position: "relative", zIndex: 10 }}>
       <span className="filter-label">FILTER:</span>
 
       <div className="filter-pills-list">
@@ -70,7 +70,7 @@ export function FilterBar({
         })}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginLeft: "auto", flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginLeft: "auto", flexShrink: 0, position: "relative", zIndex: 1 }}>
         <select
           className="search-field-input"
           style={{ width: "auto", padding: "0.32rem 0.6rem", fontSize: "0.775rem" }}
