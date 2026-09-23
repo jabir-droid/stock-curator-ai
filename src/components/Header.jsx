@@ -63,39 +63,6 @@ export function Header({
 
         {/* Quick Studio Actions */}
         <div className="header-actions">
-          {totalAssets > 0 && (
-            <button
-              className="btn btn-sm animate-fade-in"
-              onClick={onOpenAdobeExport}
-              title="Buka Pusat Pengiriman Adobe Stock (Unduh ZIP Lolos, Trik Windows, Metadata CSV)"
-              style={{
-                background: readyCount > 0 ? "rgba(16, 185, 129, 0.16)" : "var(--bg-surface-elevated)",
-                border: `1px solid ${readyCount > 0 ? "rgba(16, 185, 129, 0.4)" : "var(--border-medium)"}`,
-                color: readyCount > 0 ? "var(--status-ready)" : "var(--text-secondary)",
-                fontWeight: 600,
-                gap: "0.35rem"
-              }}
-            >
-              <UploadCloud size={13} />
-              <span>Kirim ke Adobe</span>
-              {readyCount > 0 && (
-                <span
-                  style={{
-                    background: "var(--status-ready)",
-                    color: "#ffffff",
-                    fontSize: "0.68rem",
-                    padding: "0.05rem 0.4rem",
-                    borderRadius: "999px",
-                    fontWeight: 700,
-                    lineHeight: "1.2"
-                  }}
-                >
-                  {readyCount}
-                </span>
-              )}
-            </button>
-          )}
-
           <button 
             className="btn btn-primary btn-sm" 
             onClick={onTriggerUpload}

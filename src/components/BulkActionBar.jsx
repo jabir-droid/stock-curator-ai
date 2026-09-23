@@ -126,24 +126,6 @@ export function BulkActionBar({
               <span>Sudah Ditinjau ({selectedIds.length})</span>
             </button>
 
-            {/* Kirim Terpilih ke Adobe */}
-            <button
-              className="btn btn-sm"
-              onClick={onOpenAdobeExport}
-              title="Kirim aset terpilih ke Adobe Stock (ZIP, Trik Windows, Metadata)"
-              style={{
-                background: "linear-gradient(135deg, #10b981, #059669)",
-                color: "#ffffff",
-                fontWeight: 700,
-                border: "none",
-                boxShadow: "0 2px 8px rgba(16, 185, 129, 0.4)",
-                gap: "0.35rem"
-              }}
-            >
-              <UploadCloud size={13} />
-              <span>Kirim ke Adobe ({selectedIds.length})</span>
-            </button>
-
             {/* Download Selected */}
             <button
               className="btn btn-secondary btn-sm"
