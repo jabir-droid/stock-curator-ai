@@ -196,13 +196,15 @@ export function BulkActionBar({
                 position: "absolute",
                 right: 0,
                 top: "calc(100% + 6px)",
-                zIndex: 30,
-                minWidth: "185px",
+                zIndex: 50,
+                minWidth: "195px",
                 padding: "0.35rem",
                 display: "flex",
                 flexDirection: "column",
-                gap: "0.15rem",
-                boxShadow: "var(--shadow-lg)",
+                gap: "0.2rem",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid var(--border-medium)",
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.4)",
                 background: "var(--bg-surface-elevated)"
               }}
             >
