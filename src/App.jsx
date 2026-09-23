@@ -11,6 +11,7 @@ import { AdobeRulesModal } from "./components/AdobeRulesModal";
 import { AiEngineModal } from "./components/AiEngineModal";
 import { DeleteConfirmModal } from "./components/DeleteConfirmModal";
 import { PrintReportView } from "./components/PrintReportView";
+import { AdobeStockExportModal } from "./components/AdobeStockExportModal";
 
 import { readFileMetadata, determineInitialContentType } from "./core/analyzers/fileMetadataReader";
 import { inspectVisualQuality } from "./core/analyzers/visualQuality";
@@ -42,6 +43,7 @@ export default function App() {
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [showAiEngineModal, setShowAiEngineModal] = useState(false);
   const [showPrintReport, setShowPrintReport] = useState(false);
+  const [showAdobeExportModal, setShowAdobeExportModal] = useState(false);
 
   // Delete confirmation modal state
   const [deleteModalConfig, setDeleteModalConfig] = useState({
@@ -669,6 +671,9 @@ export default function App() {
         onOpenRules={() => setShowRulesModal(true)}
         onOpenRejectionLibrary={() => setShowRejectionModal(true)}
         onOpenAiEngine={() => setShowAiEngineModal(true)}
+        onOpenAdobeExport={() => setShowAdobeExportModal(true)}
+        readyCount={counts.ready}
+        totalAssets={assets.length}
         onTriggerUpload={() => universalUploadInputRef.current?.click()}
       />
 
@@ -721,6 +726,8 @@ export default function App() {
               onExportCsv={handleExportCsv}
               onExportJson={handleExportJson}
               onOpenPrintReport={() => setShowPrintReport(true)}
+              onOpenAdobeExport={() => setShowAdobeExportModal(true)}
+              readyCount={counts.ready}
               onDeleteSelected={handleRequestDeleteSelected}
               onMarkSelectedReviewed={handleMarkSelectedReviewed}
               onMoveSelectedToReady={handleMoveSelectedToReady}
@@ -740,6 +747,66 @@ export default function App() {
               onViewModeChange={setViewMode}
               counts={counts}
             />
+
+            {/* Banner Khusus Tab Siap Submit */}
+            {activeFilter === "READY" && counts.ready > 0 && (
+              <div
+                className="glass-card animate-fade-in"
+                style={{
+                  padding: "0.9rem 1.25rem",
+                  marginBottom: "0.85rem",
+                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.08))",
+                  border: "1px solid rgba(16, 185, 129, 0.45)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "0.75rem"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                  <div
+                    style={{
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "var(--radius-md)",
+                      background: "rgba(16, 185, 129, 0.2)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--status-ready)"
+                    }}
+                  >
+                    <UploadCloud size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--text-primary)" }}>
+                      {counts.ready} Foto Lolos Kurasi Siap Submit ke Adobe Stock
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+                      Gunakan Hub Pengiriman untuk mengunduh ZIP bersih, salin nama file untuk Windows File Picker, atau download CSV metadata.
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  className="btn btn-sm"
+                  onClick={() => setShowAdobeExportModal(true)}
+                  style={{
+                    background: "linear-gradient(135deg, #10b981, #059669)",
+                    color: "#ffffff",
+                    fontWeight: 700,
+                    border: "none",
+                    boxShadow: "0 4px 14px rgba(16, 185, 129, 0.45)",
+                    padding: "0.45rem 1.1rem",
+                    gap: "0.4rem"
+                  }}
+                >
+                  <UploadCloud size={15} />
+                  <span>Kirim {counts.ready} Foto ke Adobe Stock</span>
+                </button>
+              </div>
+            )}
 
             {/* Drag feedback indicator */}
             {isDragActiveOnMain && (
@@ -865,6 +932,14 @@ export default function App() {
           onClose={() => setShowPrintReport(false)}
         />
       )}
+
+      {/* Adobe Stock Submission Hub Modal */}
+      <AdobeStockExportModal
+        isOpen={showAdobeExportModal}
+        onClose={() => setShowAdobeExportModal(false)}
+        assets={assets}
+        selectedIds={selectedIds}
+      />
     </div>
   );
 }

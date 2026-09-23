@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   Search, Zap, Download, FileSpreadsheet, FileJson, ChevronDown,
-  Trash2, Loader2, CheckCheck, CheckCircle2, AlertTriangle, Printer
+  Trash2, Loader2, CheckCheck, CheckCircle2, AlertTriangle, Printer,
+  UploadCloud
 } from "lucide-react";
 import JSZip from "jszip";
 
@@ -14,6 +15,8 @@ export function BulkActionBar({
   onExportCsv,
   onExportJson,
   onOpenPrintReport,
+  onOpenAdobeExport,
+  readyCount = 0,
   onDeleteSelected,
   onMarkSelectedReviewed,
   onMoveSelectedToReady,
@@ -123,6 +126,24 @@ export function BulkActionBar({
               <span>Sudah Ditinjau ({selectedIds.length})</span>
             </button>
 
+            {/* Kirim Terpilih ke Adobe */}
+            <button
+              className="btn btn-sm"
+              onClick={onOpenAdobeExport}
+              title="Kirim aset terpilih ke Adobe Stock (ZIP, Trik Windows, Metadata)"
+              style={{
+                background: "linear-gradient(135deg, #10b981, #059669)",
+                color: "#ffffff",
+                fontWeight: 700,
+                border: "none",
+                boxShadow: "0 2px 8px rgba(16, 185, 129, 0.4)",
+                gap: "0.35rem"
+              }}
+            >
+              <UploadCloud size={13} />
+              <span>Kirim ke Adobe ({selectedIds.length})</span>
+            </button>
+
             {/* Download Selected */}
             <button
               className="btn btn-secondary btn-sm"
@@ -162,6 +183,40 @@ export function BulkActionBar({
               <Zap size={13} />
               <span>Analisis Batch AI</span>
             </>
+          )}
+        </button>
+
+        {/* Kirim ke Adobe Stock (Submission Hub) */}
+        <button
+          className="btn btn-sm"
+          onClick={onOpenAdobeExport}
+          disabled={assets.length === 0}
+          title="Buka Pusat Pengiriman Adobe Stock (Unduh ZIP Lolos, Trik Windows, Metadata CSV)"
+          style={{
+            background: readyCount > 0 ? "linear-gradient(135deg, #10b981, #059669)" : "var(--bg-surface-elevated)",
+            border: readyCount > 0 ? "1px solid #10b981" : "1px solid var(--border-medium)",
+            color: readyCount > 0 ? "#ffffff" : "var(--text-secondary)",
+            fontWeight: 700,
+            boxShadow: readyCount > 0 ? "0 2px 10px rgba(16, 185, 129, 0.35)" : "none",
+            gap: "0.35rem"
+          }}
+        >
+          <UploadCloud size={14} />
+          <span>Kirim ke Adobe</span>
+          {readyCount > 0 && (
+            <span
+              style={{
+                background: "rgba(0, 0, 0, 0.3)",
+                color: "#ffffff",
+                fontSize: "0.68rem",
+                padding: "0.08rem 0.42rem",
+                borderRadius: "999px",
+                fontWeight: 800,
+                lineHeight: "1.2"
+              }}
+            >
+              {readyCount}
+            </span>
           )}
         </button>
 
