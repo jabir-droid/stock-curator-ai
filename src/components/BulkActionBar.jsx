@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  Search, Zap, Download, FileSpreadsheet, FileJson, ChevronDown,
+  Search, Zap, RotateCcw, Download, FileSpreadsheet, FileJson, ChevronDown,
   Trash2, Loader2, CheckCheck, CheckCircle2, AlertTriangle, Printer,
   UploadCloud, ShieldAlert
 } from "lucide-react";
@@ -150,22 +150,27 @@ export function BulkActionBar({
           </>
         )}
 
-        {/* 1. Analisis Batch AI */}
+        {/* 1. Tombol Analisis Ulang (Re-scan) */}
         <button
-          className="btn btn-primary btn-sm"
+          className="btn btn-secondary btn-sm"
           onClick={onReanalyzeBatch}
           disabled={isProcessing || assets.length === 0}
           title="Jalankan ulang analisis batch dengan Mesin AI Kurator"
+          style={{
+            borderColor: "rgba(56, 189, 248, 0.3)",
+            color: "var(--text-secondary)",
+            gap: "0.35rem"
+          }}
         >
           {isProcessing ? (
             <>
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={13} className="animate-spin text-primary" />
               <span>Menganalisis...</span>
             </>
           ) : (
             <>
-              <Zap size={13} />
-              <span>Analisis Batch AI</span>
+              <RotateCcw size={13} style={{ color: "#38bdf8" }} />
+              <span>Analisis Ulang</span>
             </>
           )}
         </button>

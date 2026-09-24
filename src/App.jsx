@@ -30,7 +30,7 @@ import {
 import { generateSampleAssets } from "./data/sampleAssets";
 import { ADOBE_STOCK_RULES } from "./data/adobeStockRules";
 
-import { Info, ShieldCheck, Database, UploadCloud } from "lucide-react";
+import { Info, ShieldCheck, Database, UploadCloud, Loader2 } from "lucide-react";
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem("stock_curator_theme") || "dark");
@@ -901,11 +901,23 @@ export default function App() {
               <strong>Pra-Moderasi Independen:</strong> Aplikasi ini memberikan evaluasi berbasis panduan resmi Adobe Stock. Keputusan akhir mutlak ditentukan oleh tim kurator internal Adobe Stock.
             </span>
           </div>
-        ) : (
-          <div className="notice-banner notice-shield animate-fade-in">
-            <ShieldCheck size={15} style={{ color: "#10b981", flexShrink: 0 }} />
+        ) : isProcessing ? (
+          <div className="notice-banner animate-fade-in" style={{ background: "rgba(56, 189, 248, 0.12)", border: "1px solid rgba(56, 189, 248, 0.4)", color: "#7dd3fc" }}>
+            <Loader2 size={15} className="animate-spin" style={{ color: "#38bdf8", flexShrink: 0 }} />
             <span>
-              <strong>Tanpa Kompresi Ulang:</strong> File asli dipertahankan tanpa manipulasi byte (100% byte-original) selama sesi peramban.
+              <strong>Analisis Otomatis Sedang Berjalan:</strong> Memeriksa kualitas visual, risiko penolakan Adobe Stock, dan kemiripan batch di latar belakang...
+            </span>
+          </div>
+        ) : (
+          <div className="notice-banner notice-shield animate-fade-in" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <ShieldCheck size={15} style={{ color: "#10b981", flexShrink: 0 }} />
+              <span>
+                <strong>Analisis Otomatis Selesai:</strong> Seluruh {assets.length} aset telah diinspeksi. File asli dipertahankan tanpa manipulasi byte (100% byte-original).
+              </span>
+            </div>
+            <span style={{ fontSize: "0.72rem", color: "#34d399", background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.3)", padding: "0.15rem 0.55rem", borderRadius: "999px", fontWeight: 600 }}>
+              ✓ Siap Dikurasi &amp; Submit
             </span>
           </div>
         )}
