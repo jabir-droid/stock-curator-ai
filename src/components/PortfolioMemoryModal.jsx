@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Database, X, Search, Trash2, Download, Upload, ShieldCheck,
-  Calendar, Zap, CheckCircle2, AlertTriangle, FileImage, RefreshCw
+  Calendar, Zap, CheckCircle2, AlertTriangle, FileImage, RefreshCw, Loader2
 } from "lucide-react";
 import {
   getAllHistoricalFingerprints,
@@ -11,10 +11,17 @@ import {
   importPortfolioMemoryJson
 } from "../core/storage/portfolioMemory";
 
-export function PortfolioMemoryModal({ isOpen, onClose, onMemoryUpdated }) {
+export function PortfolioMemoryModal({
+  isOpen,
+  onClose,
+  onMemoryUpdated,
+  currentAssets = [],
+  onSaveSessionToMemory
+}) {
   const [items, setItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isSavingSession, setIsSavingSession] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
   const fileInputRef = useRef(null);
@@ -45,6 +52,24 @@ export function PortfolioMemoryModal({ isOpen, onClose, onMemoryUpdated }) {
     const q = searchQuery.toLowerCase();
     return items.filter(item => (item.filename || "").toLowerCase().includes(q));
   }, [items, searchQuery]);
+
+  const handleSaveSession = async () => {
+    if (!currentAssets || currentAssets.length === 0) return;
+    setIsSavingSession(true);
+    try {
+      if (onSaveSessionToMemory) {
+        const count = await onSaveSessionToMemory();
+        await loadData();
+        onMemoryUpdated && onMemoryUpdated();
+        setStatusMsg(`Berhasil menyimpan ${count || currentAssets.length} aset sesi aktif ke Memori Portofolio!`);
+        setTimeout(() => setStatusMsg(""), 4000);
+      }
+    } catch (err) {
+      alert("Gagal menyimpan sesi: " + err.message);
+    } finally {
+      setIsSavingSession(false);
+    }
+  };
 
   const handleDeleteItem = async (id, filename) => {
     if (!window.confirm(`Hapus "${filename}" dari memori riwayat portofolio?`)) return;
@@ -294,6 +319,63 @@ export function PortfolioMemoryModal({ isOpen, onClose, onMemoryUpdated }) {
           >
             <CheckCircle2 size={14} />
             <span>{statusMsg}</span>
+          </div>
+        )}
+
+        {/* Active Session Sync Card */}
+        {currentAssets && currentAssets.length > 0 && (
+          <div
+            className="animate-fade-in"
+            style={{
+              margin: "0.85rem 1.4rem 0.2rem 1.4rem",
+              padding: "0.85rem 1.2rem",
+              borderRadius: "var(--radius-md)",
+              background: "linear-gradient(135deg, rgba(124, 58, 237, 0.16), rgba(59, 130, 246, 0.16))",
+              border: "1px solid rgba(167, 139, 250, 0.4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "0.75rem",
+              flexShrink: 0
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 700, color: "#c4b5fd", fontSize: "0.88rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <Zap size={15} style={{ color: "#a855f7" }} />
+                <span>Sesi Aktif Terdeteksi: {currentAssets.length} Aset Terbuka di Kurator</span>
+              </div>
+              <p style={{ margin: "3px 0 0 0", fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+                Simpan seluruh sidik jari visual aset yang sedang Anda buka ke dalam memori portofolio agar sesi berikutnya mendeteksi duplikat foto-foto ini.
+              </p>
+            </div>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={handleSaveSession}
+              disabled={isSavingSession}
+              style={{
+                background: "linear-gradient(135deg, #8b5cf6, #6366f1)",
+                border: "1px solid #8b5cf6",
+                fontWeight: 700,
+                padding: "0.45rem 1rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                boxShadow: "0 2px 10px rgba(139, 92, 246, 0.35)"
+              }}
+            >
+              {isSavingSession ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Menyimpan ke Memori...</span>
+                </>
+              ) : (
+                <>
+                  <Database size={13} />
+                  <span>Simpan {currentAssets.length} Aset Sesi Ini</span>
+                </>
+              )}
+            </button>
           </div>
         )}
 

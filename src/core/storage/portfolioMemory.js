@@ -148,18 +148,19 @@ export async function saveToPortfolioMemory(assets) {
   for (const asset of list) {
     if (!asset.pHash) continue;
 
-    let thumb = asset.miniThumbnail;
-    if (!thumb && asset.previewUrl) {
-      thumb = await generateMiniThumbnail(asset.previewUrl);
+    let thumb = asset.miniThumbnail || asset.thumbnail;
+    const pUrl = asset.previewUrl || asset.metadata?.previewUrl;
+    if (!thumb && pUrl) {
+      thumb = await generateMiniThumbnail(pUrl);
     }
 
     records.push({
       id: asset.id || `hist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      filename: asset.metadata?.filename || "Untitled",
+      filename: asset.metadata?.filename || asset.filename || "Untitled",
       pHash: asset.pHash,
-      fileSize: asset.metadata?.sizeBytes || 0,
-      megapixels: asset.metadata?.megapixels || 0,
-      format: asset.metadata?.format || "JPG",
+      fileSize: asset.metadata?.sizeBytes || asset.fileSize || 0,
+      megapixels: asset.metadata?.megapixels || asset.megapixels || 0,
+      format: asset.metadata?.extension?.toUpperCase() || asset.format || "JPG",
       uploadedAt: asset.uploadedAt || new Date().toISOString(),
       thumbnail: thumb,
       verdictKey: asset.verdict?.key || "READY",

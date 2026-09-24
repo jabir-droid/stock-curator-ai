@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   Search, Zap, RotateCcw, Download, FileSpreadsheet, FileJson, ChevronDown,
   Trash2, Loader2, CheckCheck, CheckCircle2, AlertTriangle, Printer,
-  UploadCloud, ShieldAlert
+  UploadCloud, ShieldAlert, Database
 } from "lucide-react";
 import JSZip from "jszip";
 
@@ -23,6 +23,7 @@ export function BulkActionBar({
   onMarkSelectedReviewed,
   onMoveSelectedToReady,
   onMoveSelectedToReview,
+  onSaveToMemory,
   isProcessing
 }) {
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -137,6 +138,19 @@ export function BulkActionBar({
               <Download size={13} />
               <span>Unduh ({selectedIds.length})</span>
             </button>
+
+            {/* Save Selected to Memory */}
+            {onSaveToMemory && (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => onSaveToMemory()}
+                title="Simpan sidik jari visual aset yang dipilih ke Memori Portofolio"
+                style={{ color: "#c084fc", borderColor: "rgba(168, 85, 247, 0.4)", gap: "0.35rem" }}
+              >
+                <Database size={13} style={{ color: "#a855f7" }} />
+                <span>Simpan Memori ({selectedIds.length})</span>
+              </button>
+            )}
 
             {/* Delete Selected */}
             <button
@@ -305,6 +319,19 @@ export function BulkActionBar({
                 <Printer size={13} style={{ color: "#38bdf8" }} />
                 <span>Cetak / Simpan PDF</span>
               </button>
+              {onSaveToMemory && (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  style={{ justifyContent: "flex-start", width: "100%", border: "none" }}
+                  onClick={() => {
+                    onSaveToMemory();
+                    setShowExportMenu(false);
+                  }}
+                >
+                  <Database size={13} style={{ color: "#a855f7" }} />
+                  <span>Simpan Sesi ke Memori</span>
+                </button>
+              )}
             </div>
           )}
         </div>

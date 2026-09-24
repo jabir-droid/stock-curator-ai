@@ -128,6 +128,7 @@ export default function App() {
     // 2. Fast background analysis with concurrency of 4
     const concurrency = 4;
     const queue = [...newAssets];
+    const analyzedItemsList = [];
 
     const worker = async () => {
       while (queue.length > 0) {
@@ -194,6 +195,7 @@ export default function App() {
           };
 
           // PROGRESSIVE LIVE UPDATE: Flip this card to its verdict and update stats immediately!
+          analyzedItemsList.push(analyzedItem);
           setAssets(prev => prev.map(a => a.id === item.id ? analyzedItem : a));
         } catch (err) {
           console.error("Asset analysis failed for", item.metadata.filename, err);
@@ -272,18 +274,16 @@ export default function App() {
     setIsProcessing(false);
 
     // 4. Auto-save processed assets into Portfolio Memory
-    setTimeout(async () => {
-      try {
-        const toSave = newAssets.filter(a => a.pHash);
-        if (toSave.length > 0) {
-          await saveToPortfolioMemory(toSave);
-          const updated = await getAllHistoricalFingerprints();
-          setHistoricalFingerprints(updated || []);
-        }
-      } catch (err) {
-        console.warn("Portfolio auto-save error:", err);
+    try {
+      const toSave = analyzedItemsList.filter(a => a.pHash);
+      if (toSave.length > 0) {
+        await saveToPortfolioMemory(toSave);
+        const updated = await getAllHistoricalFingerprints();
+        setHistoricalFingerprints(updated || []);
       }
-    }, 600);
+    } catch (err) {
+      console.warn("Portfolio auto-save error:", err);
+    }
   };
 
   const handleLoadSamples = async () => {
@@ -572,6 +572,28 @@ export default function App() {
     });
 
     setIsProcessing(false);
+
+    // Auto-save reanalyzed assets into Portfolio Memory
+    try {
+      const toSave = assets.filter(a => a.pHash);
+      if (toSave.length > 0) {
+        await saveToPortfolioMemory(toSave);
+        const updated = await getAllHistoricalFingerprints();
+        setHistoricalFingerprints(updated || []);
+      }
+    } catch (err) {
+      console.warn("Portfolio auto-save error on reanalyze:", err);
+    }
+  };
+
+  const handleSaveSessionToMemory = async (customAssets = null) => {
+    const target = customAssets || assets;
+    const toSave = target.filter(a => a.pHash);
+    if (toSave.length === 0) return 0;
+    const count = await saveToPortfolioMemory(toSave);
+    const updated = await getAllHistoricalFingerprints();
+    setHistoricalFingerprints(updated || []);
+    return count;
   };
 
   const handleToggleStrictness = () => {
@@ -916,9 +938,34 @@ export default function App() {
                 <strong>Analisis Otomatis Selesai:</strong> Seluruh {assets.length} aset telah diinspeksi. File asli dipertahankan tanpa manipulasi byte (100% byte-original).
               </span>
             </div>
-            <span style={{ fontSize: "0.72rem", color: "#34d399", background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.3)", padding: "0.15rem 0.55rem", borderRadius: "999px", fontWeight: 600 }}>
-              ✓ Siap Dikurasi &amp; Submit
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              {assets.length > 0 && historicalFingerprints.length === 0 && (
+                <button
+                  className="btn btn-sm"
+                  onClick={() => handleSaveSessionToMemory()}
+                  title="Simpan sidik jari visual seluruh aset ini ke Memori Portofolio agar dikenali sebagai aset riwayat jika diunggah lagi."
+                  style={{
+                    fontSize: "0.72rem",
+                    padding: "0.2rem 0.65rem",
+                    background: "rgba(168, 85, 247, 0.2)",
+                    border: "1px solid rgba(168, 85, 247, 0.5)",
+                    color: "#c084fc",
+                    fontWeight: 700,
+                    borderRadius: "999px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.35rem",
+                    cursor: "pointer"
+                  }}
+                >
+                  <Database size={12} />
+                  <span>Simpan {assets.length} Aset ke Memori</span>
+                </button>
+              )}
+              <span style={{ fontSize: "0.72rem", color: "#34d399", background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.3)", padding: "0.15rem 0.55rem", borderRadius: "999px", fontWeight: 600 }}>
+                ✓ Siap Dikurasi &amp; Submit
+              </span>
+            </div>
           </div>
         )}
 
@@ -961,6 +1008,7 @@ export default function App() {
               onMarkSelectedReviewed={handleMarkSelectedReviewed}
               onMoveSelectedToReady={handleMoveSelectedToReady}
               onMoveSelectedToReview={handleMoveSelectedToReview}
+              onSaveToMemory={handleSaveSessionToMemory}
               isProcessing={isProcessing}
             />
 
@@ -1117,6 +1165,8 @@ export default function App() {
       <PortfolioMemoryModal
         isOpen={showPortfolioMemoryModal}
         onClose={() => setShowPortfolioMemoryModal(false)}
+        currentAssets={assets}
+        onSaveSessionToMemory={handleSaveSessionToMemory}
         onMemoryUpdated={() => {
           getAllHistoricalFingerprints().then(data => setHistoricalFingerprints(data || []));
         }}
