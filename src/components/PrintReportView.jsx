@@ -17,7 +17,7 @@ export function PrintReportView({ assets, onClose }) {
   };
 
   return (
-    <div className="modal-backdrop print-modal-backdrop" onClick={onClose} style={{ zIndex: 110 }}>
+    <div className="modal-backdrop print-modal-backdrop" onClick={onClose} style={{ zIndex: 2100 }}>
       <div
         className="glass-card print-modal-container animate-fade-in"
         onClick={(e) => e.stopPropagation()}

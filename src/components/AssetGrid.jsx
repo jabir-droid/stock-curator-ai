@@ -2,7 +2,7 @@ import React from "react";
 import {
   Folder, Eye, Download, Trash2, Zap, Sparkles, Loader2,
   CheckCircle2, AlertTriangle, AlertOctagon, XCircle, CheckCheck,
-  FileText, Users, X
+  FileText, Users, X, Trophy, ShieldAlert
 } from "lucide-react";
 
 export function AssetGrid({
@@ -178,18 +178,59 @@ export function AssetGrid({
                       {renderStatusBadge(asset.status)}
                     </td>
                     <td>
-                      {asset.similarityGroup ? (
-                        <button
-                          className="badge badge-similars"
-                          style={{ fontSize: "0.7rem", border: "none", cursor: "pointer" }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onIsolateGroup && onIsolateGroup(asset.similarityGroup);
-                          }}
-                          title={`Bandingkan seluruh variasi dalam ${asset.similarityGroup}`}
-                        >
-                          {asset.similarityGroup}
-                        </button>
+                      {asset.isHistoricalDuplicate ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <span
+                            className="badge"
+                            style={{
+                              fontSize: "0.68rem",
+                              background: "rgba(124, 58, 237, 0.2)",
+                              color: "#c4b5fd",
+                              border: "1px solid rgba(167, 139, 250, 0.4)",
+                              width: "fit-content",
+                              gap: "3px"
+                            }}
+                            title={`Mirip ${asset.historicalPercent}% dengan '${asset.historicalMatch?.filename}' yang pernah diunggah sebelumnya`}
+                          >
+                            🏛️ Riwayat ({asset.historicalPercent}%)
+                          </span>
+                        </div>
+                      ) : asset.similarityGroup ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <button
+                            className="badge badge-similars"
+                            style={{ fontSize: "0.7rem", border: "none", cursor: "pointer", width: "fit-content" }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onIsolateGroup && onIsolateGroup(asset.similarityGroup);
+                            }}
+                            title={`Bandingkan seluruh variasi dalam ${asset.similarityGroup}`}
+                          >
+                            {asset.similarityGroup}
+                          </button>
+                          {asset.isChampion && (
+                            <span
+                              style={{
+                                fontSize: "0.65rem",
+                                color: asset.verdict?.color || "#10b981",
+                                fontWeight: 700,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "2px"
+                              }}
+                            >
+                              <Trophy size={10} />
+                              {asset.verdict?.key === "READY"
+                                ? "Champion"
+                                : "Pilihan Seri"}
+                            </span>
+                          )}
+                          {asset.isDuplicateRisk && (
+                            <span style={{ fontSize: "0.65rem", color: "#ef4444", fontWeight: 700, display: "flex", alignItems: "center", gap: "2px" }}>
+                              <ShieldAlert size={10} /> Duplikat ({asset.similarityPercent}%)
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <span style={{ color: "var(--text-tertiary)", fontSize: "0.75rem" }}>—</span>
                       )}
@@ -273,12 +314,58 @@ export function AssetGrid({
                     style={{ zIndex: 10 }}
                   />
 
-                  {/* Top-Right: Format Pill & Similarity Group Pill */}
+                  {/* Top-Right: Format Pill & Similarity Group Pill & Champion/Duplicate Badges */}
                   <div className="card-top-right-badges" style={{ zIndex: 10 }}>
                     <span className="badge-format-pill">
                       {formatLabel}
                     </span>
-                    {asset.similarityGroup && (
+                    {asset.isHistoricalDuplicate && (
+                      <span
+                        className="badge-group-pill"
+                        style={{ background: "#7c3aed", color: "#ffffff", fontWeight: 800, border: "1px solid #c4b5fd", display: "flex", alignItems: "center", gap: "3px" }}
+                        title={`DUPLIKAT PORTOFOLIO LAMA: Mirip ${asset.historicalPercent}% dengan '${asset.historicalMatch?.filename}' yang pernah diunggah sebelumnya.`}
+                      >
+                        🏛️ Riwayat ({asset.historicalPercent}%)
+                      </span>
+                    )}
+                    {asset.isChampion && (
+                      asset.verdict?.key === "READY" ? (
+                        <span
+                          className="badge-group-pill"
+                          style={{ background: "#10b981", color: "#ffffff", fontWeight: 800, border: "1px solid #34d399", display: "flex", alignItems: "center", gap: "3px" }}
+                          title="THE CHAMPION: Variasi terkuat & 100% siap disubmit ke Adobe Stock!"
+                        >
+                          🏆 Champion
+                        </span>
+                      ) : (
+                        <span
+                          className="badge-group-pill"
+                          style={{ background: "#f59e0b", color: "#000000", fontWeight: 800, border: "1px solid #fde68a", display: "flex", alignItems: "center", gap: "3px" }}
+                          title="PILIHAN UTAMA SERI: Variasi terkuat di grupnya. Periksa checklist kepatuhan AI / rilis sebelum submit."
+                        >
+                          ⭐ Pilihan Seri
+                        </span>
+                      )
+                    )}
+                    {!asset.similarityGroup && asset.verdict?.key === "READY" && !asset.isDuplicateRisk && !asset.isHistoricalDuplicate && (
+                      <span
+                        className="badge-group-pill"
+                        style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", fontWeight: 700, border: "1px solid rgba(16, 185, 129, 0.4)", display: "flex", alignItems: "center", gap: "3px" }}
+                        title="Aset mandiri tanpa duplikat, siap disubmit ke Adobe Stock."
+                      >
+                        ✨ Siap Submit
+                      </span>
+                    )}
+                    {asset.isDuplicateRisk && (
+                      <span
+                        className="badge-group-pill"
+                        style={{ background: "#ef4444", color: "#fff", fontWeight: 700, border: "1px solid #fca5a5" }}
+                        title={`DUPLIKAT BERISIKO (${asset.similarityPercent}% mirip dengan Champion)`}
+                      >
+                        ⛔ Duplikat
+                      </span>
+                    )}
+                    {asset.similarityGroup && !asset.isChampion && !asset.isDuplicateRisk && !asset.isHistoricalDuplicate && (
                       <span
                         className="badge-group-pill"
                         title={`Klik untuk membandingkan grup ${asset.similarityGroup}`}

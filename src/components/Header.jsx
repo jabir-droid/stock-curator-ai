@@ -1,5 +1,5 @@
 import React from "react";
-import { Shield, BookOpen, Cpu, UploadCloud, Sun, Moon } from "lucide-react";
+import { Shield, BookOpen, Cpu, UploadCloud, Sun, Moon, Database } from "lucide-react";
 
 export function Header({
   theme,
@@ -8,6 +8,8 @@ export function Header({
   onOpenRejectionLibrary,
   onOpenAiEngine,
   onOpenAdobeExport,
+  onOpenPortfolioMemory,
+  memoryCount = 0,
   readyCount = 0,
   totalAssets = 0,
   onTriggerUpload
@@ -37,6 +39,14 @@ export function Header({
         <nav className="studio-workspace-tabs" aria-label="Studio Workspace">
           <button 
             className="workspace-tab" 
+            onClick={onOpenPortfolioMemory}
+            title={`Memori Portofolio (${memoryCount} aset tersimpan) — Mencegah duplikasi dengan gambar sesi sebelumnya`}
+          >
+            <Database size={13} style={{ color: "#a855f7" }} />
+            <span>MEMORI ({memoryCount})</span>
+          </button>
+          <button 
+            className="workspace-tab" 
             onClick={onOpenRejectionLibrary}
             title="Perpustakaan Panduan Alasan Penolakan Kurator (WHAT • WHY • HOW TO FIX)"
           >
@@ -56,7 +66,7 @@ export function Header({
             onClick={onOpenAiEngine}
             title="Pengaturan Mesin AI (Integrasi Gemini Vision & Analisis Heuristik Lokal)"
           >
-            <Cpu size={13} style={{ color: "#a855f7" }} />
+            <Cpu size={13} style={{ color: "#34d399" }} />
             <span>MESIN AI</span>
           </button>
         </nav>

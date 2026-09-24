@@ -19,8 +19,14 @@ import { detectGenerativeAI } from "./core/analyzers/aiDetector";
 import { analyzeIpAndReleases } from "./core/analyzers/ipRiskAnalyzer";
 import { analyzeCopySpace } from "./core/analyzers/copySpaceAnalyzer";
 import { analyzeCommercialStockValue } from "./core/analyzers/commercialInsight";
-import { computePerceptualHash, clusterSimilarAssets } from "./core/analyzers/batchSimilarity";
+import { computePerceptualHash, clusterSimilarAssets, getDuplicateRiskIds, setManualChampion } from "./core/analyzers/batchSimilarity";
 import { evaluateCuratorVerdict } from "./core/analyzers/curatorVerdict";
+import { PortfolioMemoryModal } from "./components/PortfolioMemoryModal";
+import {
+  getAllHistoricalFingerprints,
+  saveToPortfolioMemory,
+  checkHistoricalDuplicate
+} from "./core/storage/portfolioMemory";
 import { generateSampleAssets } from "./data/sampleAssets";
 import { ADOBE_STOCK_RULES } from "./data/adobeStockRules";
 
@@ -28,6 +34,7 @@ import { Info, ShieldCheck, Database, UploadCloud } from "lucide-react";
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem("stock_curator_theme") || "dark");
+  const [strictnessMode, setStrictnessMode] = useState(() => localStorage.getItem("stock_curator_strictness") || "BALANCED");
   const [assets, setAssets] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [activeFilter, setActiveFilter] = useState("ALL");
@@ -44,6 +51,15 @@ export default function App() {
   const [showAiEngineModal, setShowAiEngineModal] = useState(false);
   const [showPrintReport, setShowPrintReport] = useState(false);
   const [showAdobeExportModal, setShowAdobeExportModal] = useState(false);
+  const [showPortfolioMemoryModal, setShowPortfolioMemoryModal] = useState(false);
+  const [historicalFingerprints, setHistoricalFingerprints] = useState([]);
+
+  // Load persistent portfolio memory on startup
+  useEffect(() => {
+    getAllHistoricalFingerprints().then(data => {
+      setHistoricalFingerprints(data || []);
+    });
+  }, []);
 
   // Delete confirmation modal state
   const [deleteModalConfig, setDeleteModalConfig] = useState({
@@ -130,6 +146,13 @@ export default function App() {
           const copySpace = await analyzeCopySpace(metadata.previewUrl);
           const commercialValue = analyzeCommercialStockValue(metadata, copySpace, visualQuality);
 
+          // Historical cross-session duplicate guard
+          const histCheck = checkHistoricalDuplicate(
+            { id: item.id, pHash, metadata },
+            historicalFingerprints,
+            new Set(newAssets.map(a => a.id))
+          );
+
           const verdictData = evaluateCuratorVerdict({
             metadata,
             visualQuality,
@@ -138,6 +161,9 @@ export default function App() {
             copySpace,
             commercialValue,
             similarityGroup: null,
+            isHistoricalDuplicate: histCheck.isHistoricalDuplicate,
+            historicalMatch: histCheck.matchedAsset,
+            historicalPercent: histCheck.similarityPercent,
             isIllustrativeEditorial: item.isIllustrativeEditorial
           });
 
@@ -151,6 +177,9 @@ export default function App() {
             status,
             metadata,
             pHash,
+            isHistoricalDuplicate: histCheck.isHistoricalDuplicate,
+            historicalMatch: histCheck.matchedAsset,
+            historicalPercent: histCheck.similarityPercent,
             visualQuality,
             aiDetection,
             ipRisk,
@@ -180,11 +209,22 @@ export default function App() {
     const workers = Array.from({ length: Math.min(concurrency, newAssets.length) }, () => worker());
     await Promise.all(workers);
 
-    // 3. Final cross-batch clustering for similarity groups (A, B, etc.)
+    // 3. Final cross-batch clustering for similarity groups & Champion selection
     setAssets(prev => {
       const clustered = clusterSimilarAssets(prev);
       return clustered.map(asset => {
         if (!asset.metadata?.rawFile || asset.status === "ERROR") return asset;
+
+        const histCheck = checkHistoricalDuplicate(
+          asset,
+          historicalFingerprints,
+          new Set([asset.id])
+        );
+
+        const isHistDup = asset.isHistoricalDuplicate || histCheck.isHistoricalDuplicate;
+        const histMatch = asset.historicalMatch || histCheck.matchedAsset;
+        const histPercent = asset.historicalPercent || histCheck.similarityPercent;
+
         const verdictData = evaluateCuratorVerdict({
           metadata: asset.metadata,
           visualQuality: asset.visualQuality || {},
@@ -193,7 +233,15 @@ export default function App() {
           copySpace: asset.copySpace || {},
           commercialValue: asset.commercialValue || {},
           similarityGroup: asset.similarityGroup,
-          isIllustrativeEditorial: asset.isIllustrativeEditorial
+          isChampion: asset.isChampion,
+          isDuplicateRisk: asset.isDuplicateRisk,
+          similarityPercent: asset.similarityPercent,
+          championName: asset.championName,
+          isHistoricalDuplicate: isHistDup,
+          historicalMatch: histMatch,
+          historicalPercent: histPercent,
+          isIllustrativeEditorial: asset.isIllustrativeEditorial,
+          strictnessMode
         });
 
         let status = "PASSED";
@@ -201,8 +249,15 @@ export default function App() {
         else if (verdictData.verdict.key === "HIGH_RISK") status = "WARNING";
         else if (verdictData.verdict.key === "REVIEW") status = "REVIEW";
 
+        // Strict Champion qualification: Never crown an asset that fails technical quality
+        const isEligibleChampion = (verdictData.verdict.key === "READY" || verdictData.verdict.key === "REVIEW") ? !!asset.isChampion : false;
+
         return {
           ...asset,
+          isHistoricalDuplicate: isHistDup,
+          historicalMatch: histMatch,
+          historicalPercent: histPercent,
+          isChampion: isEligibleChampion,
           status,
           verdict: verdictData.verdict,
           verdictReason: verdictData.verdictReason,
@@ -215,6 +270,20 @@ export default function App() {
     });
 
     setIsProcessing(false);
+
+    // 4. Auto-save processed assets into Portfolio Memory
+    setTimeout(async () => {
+      try {
+        const toSave = newAssets.filter(a => a.pHash);
+        if (toSave.length > 0) {
+          await saveToPortfolioMemory(toSave);
+          const updated = await getAllHistoricalFingerprints();
+          setHistoricalFingerprints(updated || []);
+        }
+      } catch (err) {
+        console.warn("Portfolio auto-save error:", err);
+      }
+    }, 600);
   };
 
   const handleLoadSamples = async () => {
@@ -386,6 +455,12 @@ export default function App() {
           const copySpace = await analyzeCopySpace(metadata.previewUrl);
           const commercialValue = analyzeCommercialStockValue(metadata, copySpace, visualQuality);
 
+          const histCheck = checkHistoricalDuplicate(
+            { id: item.id, pHash, metadata },
+            historicalFingerprints,
+            new Set(assets.map(a => a.id))
+          );
+
           const verdictData = evaluateCuratorVerdict({
             metadata,
             visualQuality,
@@ -394,6 +469,9 @@ export default function App() {
             copySpace,
             commercialValue,
             similarityGroup: item.similarityGroup,
+            isHistoricalDuplicate: histCheck.isHistoricalDuplicate,
+            historicalMatch: histCheck.matchedAsset,
+            historicalPercent: histCheck.similarityPercent,
             isIllustrativeEditorial: item.isIllustrativeEditorial
           });
 
@@ -407,6 +485,9 @@ export default function App() {
             status,
             metadata,
             pHash,
+            isHistoricalDuplicate: histCheck.isHistoricalDuplicate,
+            historicalMatch: histCheck.matchedAsset,
+            historicalPercent: histCheck.similarityPercent,
             visualQuality,
             aiDetection,
             ipRisk,
@@ -431,11 +512,22 @@ export default function App() {
     const workers = Array.from({ length: Math.min(concurrency, assets.length) }, () => worker());
     await Promise.all(workers);
 
-    // Final clustering pass
+    // Final clustering pass & Champion crowning
     setAssets(prev => {
       const clustered = clusterSimilarAssets(prev);
       return clustered.map(asset => {
         if (!asset.metadata?.rawFile || asset.status === "ERROR") return asset;
+
+        const histCheck = checkHistoricalDuplicate(
+          asset,
+          historicalFingerprints,
+          new Set([asset.id])
+        );
+
+        const isHistDup = asset.isHistoricalDuplicate || histCheck.isHistoricalDuplicate;
+        const histMatch = asset.historicalMatch || histCheck.matchedAsset;
+        const histPercent = asset.historicalPercent || histCheck.similarityPercent;
+
         const verdictData = evaluateCuratorVerdict({
           metadata: asset.metadata,
           visualQuality: asset.visualQuality || {},
@@ -444,7 +536,116 @@ export default function App() {
           copySpace: asset.copySpace || {},
           commercialValue: asset.commercialValue || {},
           similarityGroup: asset.similarityGroup,
-          isIllustrativeEditorial: asset.isIllustrativeEditorial
+          isChampion: asset.isChampion,
+          isDuplicateRisk: asset.isDuplicateRisk,
+          similarityPercent: asset.similarityPercent,
+          championName: asset.championName,
+          isHistoricalDuplicate: isHistDup,
+          historicalMatch: histMatch,
+          historicalPercent: histPercent,
+          isIllustrativeEditorial: asset.isIllustrativeEditorial,
+          strictnessMode
+        });
+
+        let status = "PASSED";
+        if (verdictData.verdict.key === "NOT_RECOMMENDED") status = "REJECT_RISK";
+        else if (verdictData.verdict.key === "HIGH_RISK") status = "WARNING";
+        else if (verdictData.verdict.key === "REVIEW") status = "REVIEW";
+
+        const isEligibleChampion = (verdictData.verdict.key === "READY" || verdictData.verdict.key === "REVIEW") ? !!asset.isChampion : false;
+
+        return {
+          ...asset,
+          isHistoricalDuplicate: isHistDup,
+          historicalMatch: histMatch,
+          historicalPercent: histPercent,
+          isChampion: isEligibleChampion,
+          status,
+          verdict: verdictData.verdict,
+          verdictReason: verdictData.verdictReason,
+          pros: verdictData.pros,
+          issues: verdictData.issues,
+          recommendedActions: verdictData.recommendedActions,
+          diagnosticMeters: verdictData.diagnosticMeters
+        };
+      });
+    });
+
+    setIsProcessing(false);
+  };
+
+  const handleToggleStrictness = () => {
+    const nextMode = strictnessMode === "BALANCED" ? "STRICT_ADOBE" : "BALANCED";
+    setStrictnessMode(nextMode);
+    localStorage.setItem("stock_curator_strictness", nextMode);
+
+    // Re-evaluate all assets with new strictness level immediately
+    setAssets(prev => prev.map(asset => {
+      if (!asset.metadata?.rawFile || asset.status === "ERROR") return asset;
+      const verdictData = evaluateCuratorVerdict({
+        metadata: asset.metadata,
+        visualQuality: asset.visualQuality || {},
+        aiDetection: asset.aiDetection || {},
+        ipRisk: asset.ipRisk || {},
+        copySpace: asset.copySpace || {},
+        commercialValue: asset.commercialValue || {},
+        similarityGroup: asset.similarityGroup,
+        isChampion: asset.isChampion,
+        isDuplicateRisk: asset.isDuplicateRisk,
+        similarityPercent: asset.similarityPercent,
+        championName: asset.championName,
+        isIllustrativeEditorial: asset.isIllustrativeEditorial,
+        strictnessMode: nextMode
+      });
+
+      let status = "PASSED";
+      if (verdictData.verdict.key === "NOT_RECOMMENDED") status = "REJECT_RISK";
+      else if (verdictData.verdict.key === "HIGH_RISK") status = "WARNING";
+      else if (verdictData.verdict.key === "REVIEW") status = "REVIEW";
+
+      return {
+        ...asset,
+        status,
+        verdict: verdictData.verdict,
+        verdictReason: verdictData.verdictReason,
+        pros: verdictData.pros,
+        issues: verdictData.issues,
+        recommendedActions: verdictData.recommendedActions,
+        diagnosticMeters: verdictData.diagnosticMeters
+      };
+    }));
+  };
+
+  const handlePruneDuplicates = () => {
+    const duplicateIds = assets.filter(a => a.isDuplicateRisk || a.isHistoricalDuplicate).map(a => a.id);
+    if (duplicateIds.length === 0) return;
+
+    if (window.confirm(`Pangkas ${duplicateIds.length} variasi duplikat berisiko & duplikat riwayat? Aset ini akan disingkirkan agar tidak memicu penolakan 'Similar Content' oleh Adobe Stock.`)) {
+      setAssets(prev => prev.filter(a => !duplicateIds.includes(a.id)));
+      setSelectedIds(prev => prev.filter(id => !duplicateIds.includes(id)));
+      if (isolatedGroup) setIsolatedGroup(null);
+    }
+  };
+
+  const handleSetManualChampion = (groupId, newChampionId) => {
+    setAssets(prev => {
+      const updated = setManualChampion(prev, groupId, newChampionId);
+      return updated.map(asset => {
+        if (asset.similarityGroup !== groupId) return asset;
+        const verdictData = evaluateCuratorVerdict({
+          metadata: asset.metadata,
+          visualQuality: asset.visualQuality || {},
+          aiDetection: asset.aiDetection || {},
+          ipRisk: asset.ipRisk || {},
+          copySpace: asset.copySpace || {},
+          commercialValue: asset.commercialValue || {},
+          similarityGroup: asset.similarityGroup,
+          isChampion: asset.isChampion,
+          isDuplicateRisk: asset.isDuplicateRisk,
+          similarityPercent: asset.similarityPercent,
+          championName: asset.championName,
+          isIllustrativeEditorial: asset.isIllustrativeEditorial,
+          strictnessMode
         });
 
         let status = "PASSED";
@@ -464,8 +665,6 @@ export default function App() {
         };
       });
     });
-
-    setIsProcessing(false);
   };
 
   const handleUpdateNotes = (assetId, notesText) => {
@@ -578,7 +777,7 @@ export default function App() {
     setTimeout(() => URL.revokeObjectURL(url), 1500);
   };
 
-  // Comprehensive Counts for 8+ Filters
+  // Comprehensive Counts for Filters
   const counts = useMemo(() => {
     return {
       total: assets.length,
@@ -586,6 +785,10 @@ export default function App() {
       review: assets.filter(a => a.verdict?.key === "REVIEW").length,
       highRisk: assets.filter(a => a.verdict?.key === "HIGH_RISK").length,
       notRec: assets.filter(a => a.verdict?.key === "NOT_RECOMMENDED").length,
+      historicalDuplicates: assets.filter(a => !!a.isHistoricalDuplicate).length,
+      // Champions (Pilihan Terbaik): Aset SIAP SUBMIT pilihan kurator (Champion grup variasi ATAU aset unik prima)
+      champions: assets.filter(a => a.verdict?.key === "READY" && (a.isChampion || (!a.similarityGroup && !a.isDuplicateRisk))).length,
+      duplicateRisks: assets.filter(a => !!a.isDuplicateRisk).length,
       ai: assets.filter(a => a.aiDetection?.isLikelyAi).length,
       vector: assets.filter(a => a.metadata?.isVector).length,
       ip: assets.filter(a => a.ipRisk?.issues?.some(i => i.category === "TRADEMARK")).length,
@@ -614,7 +817,11 @@ export default function App() {
 
       // 3. Tab Filter
       switch (activeFilter) {
-        case "READY": return asset.verdict?.key === "READY";
+        case "CHAMPIONS":
+        case "READY":
+          return asset.verdict?.key === "READY";
+        case "HISTORICAL_DUPLICATE": return !!asset.isHistoricalDuplicate;
+        case "DUPLICATE_RISK": return !!asset.isDuplicateRisk;
         case "REVIEW": return asset.verdict?.key === "REVIEW";
         case "HIGH_RISK": return asset.verdict?.key === "HIGH_RISK";
         case "NOT_RECOMMENDED": return asset.verdict?.key === "NOT_RECOMMENDED";
@@ -628,6 +835,12 @@ export default function App() {
         default: return true;
       }
     }).sort((a, b) => {
+      if (sortBy === "CHAMPION") {
+        const isCuratedBestA = a.verdict?.key === "READY" && (a.isChampion || (!a.similarityGroup && !a.isDuplicateRisk));
+        const isCuratedBestB = b.verdict?.key === "READY" && (b.isChampion || (!b.similarityGroup && !b.isDuplicateRisk));
+        if (isCuratedBestA && !isCuratedBestB) return -1;
+        if (!isCuratedBestA && isCuratedBestB) return 1;
+      }
       if (sortBy === "MEGAPIXELS") return (b.metadata.megapixels || 0) - (a.metadata.megapixels || 0);
       if (sortBy === "SIZE") return (b.metadata.sizeBytes || 0) - (a.metadata.sizeBytes || 0);
       if (sortBy === "STATUS") {
@@ -672,6 +885,8 @@ export default function App() {
         onOpenRejectionLibrary={() => setShowRejectionModal(true)}
         onOpenAiEngine={() => setShowAiEngineModal(true)}
         onOpenAdobeExport={() => setShowAdobeExportModal(true)}
+        onOpenPortfolioMemory={() => setShowPortfolioMemoryModal(true)}
+        memoryCount={historicalFingerprints.length}
         readyCount={counts.ready}
         totalAssets={assets.length}
         onTriggerUpload={() => universalUploadInputRef.current?.click()}
@@ -728,6 +943,8 @@ export default function App() {
               onOpenPrintReport={() => setShowPrintReport(true)}
               onOpenAdobeExport={() => setShowAdobeExportModal(true)}
               readyCount={counts.ready}
+              duplicateCount={counts.duplicateRisks + counts.historicalDuplicates}
+              onPruneDuplicates={handlePruneDuplicates}
               onDeleteSelected={handleRequestDeleteSelected}
               onMarkSelectedReviewed={handleMarkSelectedReviewed}
               onMoveSelectedToReady={handleMoveSelectedToReady}
@@ -746,6 +963,8 @@ export default function App() {
               viewMode={viewMode}
               onViewModeChange={setViewMode}
               counts={counts}
+              strictnessMode={strictnessMode}
+              onToggleStrictness={handleToggleStrictness}
             />
 
             {/* Drag feedback indicator */}
@@ -838,6 +1057,7 @@ export default function App() {
           onToggleEditorialMode={handleToggleEditorialMode}
           onToggleReviewed={handleToggleReviewed}
           onReanalyzeSingle={handleReanalyzeSingle}
+          onSetManualChampion={handleSetManualChampion}
         />
       )}
 
@@ -879,6 +1099,15 @@ export default function App() {
         onClose={() => setShowAdobeExportModal(false)}
         assets={assets}
         selectedIds={selectedIds}
+      />
+
+      {/* Portfolio Memory & Cross-Session Duplicate Modal */}
+      <PortfolioMemoryModal
+        isOpen={showPortfolioMemoryModal}
+        onClose={() => setShowPortfolioMemoryModal(false)}
+        onMemoryUpdated={() => {
+          getAllHistoricalFingerprints().then(data => setHistoricalFingerprints(data || []));
+        }}
       />
     </div>
   );

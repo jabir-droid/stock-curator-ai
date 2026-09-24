@@ -54,7 +54,7 @@ export async function analyzeIpAndReleases(imageSource, metadata) {
       propertyReleaseRequired = true;
       if (riskLevel !== "TINGGI") riskLevel = "SEDANG";
       issues.push({
-        priority: "HIGH",
+        priority: "MEDIUM",
         category: "PROPERTY_RELEASE",
         title: "Kemungkinan memerlukan dokumen Rilis Properti",
         detail: `Properti atau landmark arsitektur terkenal ('${property}') teridentifikasi. Pengajuan komersial memerlukan formulir Property Release yang ditandatangani atau klasifikasi Editorial Ilustratif.`
@@ -68,7 +68,7 @@ export async function analyzeIpAndReleases(imageSource, metadata) {
     if (filename.includes(humanKw)) {
       modelReleaseRequired = true;
       issues.push({
-        priority: "HIGH",
+        priority: "MEDIUM",
         category: "MODEL_RELEASE",
         title: "Potensi memerlukan dokumen Rilis Model (Orang)",
         detail: `Subjek merujuk pada orang/wajah yang dapat dikenali ('${humanKw}'). Jika orang yang digambarkan nyata, formulir Model Release Adobe Stock wajib dilampirkan. Jika karakter fiktif AI, pastikan konfirmasi status fiktif.`

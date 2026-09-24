@@ -3,37 +3,40 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(10, 13, 19, 0.75);
+  background: rgba(8, 10, 15, 0.88);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  z-index: 100;
+  z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: 1.25rem;
 }
 
 .detail-modal-container {
   width: 100%;
-  max-width: 1240px;
-  height: 88vh;
+  max-width: 1260px;
+  height: 90vh;
+  max-height: 920px;
   background: var(--bg-surface);
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
+  z-index: 2001;
 }
 
 .detail-top-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.65rem 1.25rem;
+  padding: 0.75rem 1.25rem;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-surface-elevated);
+  flex-shrink: 0;
 }
 
 .detail-nav-left {

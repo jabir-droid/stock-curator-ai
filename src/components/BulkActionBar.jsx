@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   Search, Zap, Download, FileSpreadsheet, FileJson, ChevronDown,
   Trash2, Loader2, CheckCheck, CheckCircle2, AlertTriangle, Printer,
-  UploadCloud
+  UploadCloud, ShieldAlert
 } from "lucide-react";
 import JSZip from "jszip";
 
@@ -17,6 +17,8 @@ export function BulkActionBar({
   onOpenPrintReport,
   onOpenAdobeExport,
   readyCount = 0,
+  duplicateCount = 0,
+  onPruneDuplicates,
   onDeleteSelected,
   onMarkSelectedReviewed,
   onMoveSelectedToReady,
@@ -77,7 +79,7 @@ export function BulkActionBar({
   const hasSelection = selectedIds.length > 0;
 
   return (
-    <div className="action-search-bar animate-fade-in" style={{ position: "relative", zIndex: 40 }}>
+    <div className="action-search-bar animate-fade-in" style={{ position: "relative", zIndex: 5 }}>
       {/* Search Input */}
       <div className="search-field-wrapper">
         <Search size={14} />
@@ -167,6 +169,25 @@ export function BulkActionBar({
             </>
           )}
         </button>
+
+        {/* 1.1 Pangkas Duplikat Berisiko (Anti Similar Submissions) */}
+        {duplicateCount > 0 && onPruneDuplicates && (
+          <button
+            className="btn btn-sm"
+            onClick={onPruneDuplicates}
+            title="Otomatis singkirkan variasi duplikat berisiko dan hanya pertahankan karya Champion untuk mencegah penolakan Similar Content."
+            style={{
+              background: "rgba(239, 68, 68, 0.15)",
+              border: "1px solid rgba(239, 68, 68, 0.5)",
+              color: "#fca5a5",
+              fontWeight: 700,
+              gap: "0.35rem"
+            }}
+          >
+            <ShieldAlert size={14} style={{ color: "#ef4444" }} />
+            <span>Pangkas Duplikat ({duplicateCount})</span>
+          </button>
+        )}
 
         {/* Kirim ke Adobe Stock (Submission Hub) */}
         <button

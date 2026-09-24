@@ -18,7 +18,7 @@ export function DeleteConfirmModal({
       : `Hapus aset terpilih?`;
 
   return (
-    <div className="modal-backdrop animate-fade-in" onClick={onClose} style={{ zIndex: 100 }}>
+    <div className="modal-backdrop animate-fade-in" onClick={onClose} style={{ zIndex: 2200 }}>
       <div
         className="glass-card animate-scale-up"
         onClick={(e) => e.stopPropagation()}
