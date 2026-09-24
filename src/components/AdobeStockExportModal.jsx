@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import {
-  X, CheckCircle2, Download, Copy, Check, ExternalLink,
-  Terminal, FileSpreadsheet, FolderArchive, HelpCircle,
-  UploadCloud, Sparkles, ArrowRight, ShieldCheck, CheckCheck
+  X, CheckCircle2, Download, ExternalLink,
+  FileSpreadsheet, FolderArchive,
+  UploadCloud, ShieldCheck, CheckCheck
 } from "lucide-react";
 import JSZip from "jszip";
 import { generateMetadataSuggestions } from "../core/metadata/metadataGenerator";
@@ -24,9 +24,7 @@ export function AdobeStockExportModal({
     readyAssets.length > 0 ? "READY" : (selectedAssets.length > 0 ? "SELECTED" : "ALL")
   );
 
-  const [copiedKey, setCopiedKey] = useState(null);
   const [isZipping, setIsZipping] = useState(false);
-  const [showGuide, setShowGuide] = useState(false);
 
   const targetAssets = scope === "READY"
     ? readyAssets
@@ -35,26 +33,6 @@ export function AdobeStockExportModal({
       : assets;
 
   const count = targetAssets.length;
-
-  // Format filenames for Windows File Picker: "file1.jpg" "file2.jpg"
-  const getQuotedFilenames = () => {
-    return targetAssets
-      .map(a => `"${a.metadata.filename}"`)
-      .join(" ");
-  };
-
-  // Format PowerShell Copy Command
-  const getPowerShellCommand = () => {
-    const fileList = targetAssets.map(a => `"${a.metadata.filename}"`).join(", ");
-    return `mkdir Siap_Adobe_Stock -ErrorAction SilentlyContinue; @(${fileList}) | ForEach-Object { if (Test-Path $_) { Copy-Item $_ Siap_Adobe_Stock\\ } }; Write-Host "Selesai! ${count} foto disalin ke folder Siap_Adobe_Stock" -ForegroundColor Green`;
-  };
-
-  // 1. Copy Handler
-  const handleCopy = (text, key) => {
-    navigator.clipboard.writeText(text);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 2500);
-  };
 
   // 2. Download ZIP Handler (Original raw bytes, 100% byte-original)
   const handleDownloadZip = async () => {
@@ -296,163 +274,37 @@ export function AdobeStockExportModal({
             </div>
           ) : (
             <>
-              {/* Solution 1: Windows File Picker Trick (Fastest!) */}
+              {/* Solusi 1: Unduh Arsip ZIP (Folder Bersih Siap Upload) */}
               <div
                 className="glass-card animate-fade-in"
                 style={{
-                  padding: "1.15rem",
-                  border: "1px solid rgba(56, 189, 248, 0.3)",
-                  background: "linear-gradient(135deg, rgba(56, 189, 248, 0.08), transparent 70%)"
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", marginBottom: "0.75rem" }}>
-                  <div style={{ display: "flex", gap: "0.6rem" }}>
-                    <div
-                      style={{
-                        padding: "0.4rem",
-                        borderRadius: "var(--radius-sm)",
-                        background: "rgba(56, 189, 248, 0.15)",
-                        color: "#38bdf8",
-                        height: "fit-content"
-                      }}
-                    >
-                      <Copy size={16} />
-                    </div>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700 }}>
-                          Solusi 1: Trik Salin Nama File (Windows File Picker)
-                        </h4>
-                        <span
-                          style={{
-                            fontSize: "0.65rem",
-                            padding: "0.1rem 0.4rem",
-                            borderRadius: "4px",
-                            fontWeight: 700,
-                            background: "rgba(56, 189, 248, 0.2)",
-                            color: "#38bdf8"
-                          }}
-                        >
-                          TERCEPAT (3 DETIK)
-                        </span>
-                      </div>
-                      <p style={{ margin: "0.25rem 0 0", fontSize: "0.79rem", color: "var(--text-secondary)" }}>
-                        Langsung pilih {count} foto dari folder aslinya di komputer tanpa perlu download ulang atau pindah-pindah folder.
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => handleCopy(getQuotedFilenames(), "picker")}
-                    style={{ flexShrink: 0, gap: "0.4rem", background: "#0284c7", borderColor: "#0284c7" }}
-                  >
-                    {copiedKey === "picker" ? <Check size={14} /> : <Copy size={14} />}
-                    <span>{copiedKey === "picker" ? "Nama File Disalin!" : "Salin Nama File"}</span>
-                  </button>
-                </div>
-
-                {/* Quoted preview snippet */}
-                <div
-                  style={{
-                    background: "rgba(0, 0, 0, 0.35)",
-                    padding: "0.5rem 0.75rem",
-                    borderRadius: "var(--radius-sm)",
-                    fontFamily: "var(--font-mono, monospace)",
-                    fontSize: "0.75rem",
-                    color: "#94a3b8",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    border: "1px solid var(--border-subtle)",
-                    marginBottom: "0.5rem"
-                  }}
-                  title={getQuotedFilenames()}
-                >
-                  {getQuotedFilenames()}
-                </div>
-
-                {/* How to use collapsible / toggle */}
-                <div>
-                  <button
-                    style={{
-                      background: "none",
-                      border: "none",
-                      padding: 0,
-                      color: "#38bdf8",
-                      fontSize: "0.75rem",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.3rem",
-                      fontWeight: 600
-                    }}
-                    onClick={() => setShowGuide(!showGuide)}
-                  >
-                    <HelpCircle size={13} />
-                    <span>{showGuide ? "Sembunyikan Cara Pakai di Windows" : "Cara Pakai Trik Ini di Windows (Klik untuk melihat)"}</span>
-                  </button>
-
-                  {showGuide && (
-                    <div
-                      className="animate-fade-in"
-                      style={{
-                        marginTop: "0.6rem",
-                        padding: "0.65rem 0.85rem",
-                        background: "rgba(0, 0, 0, 0.25)",
-                        borderRadius: "var(--radius-sm)",
-                        fontSize: "0.77rem",
-                        color: "var(--text-secondary)",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.35rem"
-                      }}
-                    >
-                      <div>
-                        <strong>1. Buka Portal Adobe:</strong> Buka tab upload Adobe Stock lalu klik tombol <em>Upload / Browse</em>.
-                      </div>
-                      <div>
-                        <strong>2. Paste di Dialog Windows:</strong> Saat jendela Windows Explorer terbuka di folder foto Anda, klik pada kotak input <strong>&ldquo;File name:&rdquo;</strong> di bagian bawah.
-                      </div>
-                      <div>
-                        <strong>3. Tekan Ctrl + V lalu Enter:</strong> Windows akan otomatis memilih dan menyorot HANYA {count} file yang lulus tersebut!
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Solution 2: Download Clean ZIP */}
-              <div
-                className="glass-card animate-fade-in"
-                style={{
-                  padding: "1.15rem",
-                  border: "1px solid rgba(16, 185, 129, 0.3)",
-                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08), transparent 70%)"
+                  padding: "1.25rem",
+                  border: "1px solid rgba(16, 185, 129, 0.35)",
+                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1), transparent 70%)"
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
-                  <div style={{ display: "flex", gap: "0.6rem" }}>
+                  <div style={{ display: "flex", gap: "0.75rem" }}>
                     <div
                       style={{
-                        padding: "0.4rem",
+                        padding: "0.5rem",
                         borderRadius: "var(--radius-sm)",
                         background: "rgba(16, 185, 129, 0.15)",
                         color: "var(--status-ready)",
                         height: "fit-content"
                       }}
                     >
-                      <FolderArchive size={16} />
+                      <FolderArchive size={20} />
                     </div>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700 }}>
-                          Solusi 2: Unduh Arsip ZIP (Folder Bersih Siap Upload)
+                        <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>
+                          Solusi 1: Unduh Arsip ZIP (Folder Bersih Siap Upload)
                         </h4>
                         <span
                           style={{
                             fontSize: "0.65rem",
-                            padding: "0.1rem 0.4rem",
+                            padding: "0.1rem 0.45rem",
                             borderRadius: "4px",
                             fontWeight: 700,
                             background: "rgba(16, 185, 129, 0.2)",
@@ -462,7 +314,7 @@ export function AdobeStockExportModal({
                           100% BYTE-ORIGINAL
                         </span>
                       </div>
-                      <p style={{ margin: "0.25rem 0 0", fontSize: "0.79rem", color: "var(--text-secondary)" }}>
+                      <p style={{ margin: "0.35rem 0 0", fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
                         Download seluruh {count} file asli tanpa kompresi dalam 1 file ZIP. Ekstrak ke folder baru lalu drag-and-drop langsung ke Adobe Stock.
                       </p>
                     </div>
@@ -471,13 +323,16 @@ export function AdobeStockExportModal({
                   <button
                     className="btn btn-sm"
                     onClick={handleDownloadZip}
-                    disabled={isZipping}
+                    disabled={isZipping || count === 0}
                     style={{
                       flexShrink: 0,
                       gap: "0.4rem",
                       background: "var(--status-ready)",
                       borderColor: "var(--status-ready)",
-                      color: "#ffffff"
+                      color: "#ffffff",
+                      fontWeight: 700,
+                      padding: "0.5rem 1rem",
+                      boxShadow: "0 2px 10px rgba(16, 185, 129, 0.35)"
                     }}
                   >
                     <Download size={14} />
@@ -486,47 +341,47 @@ export function AdobeStockExportModal({
                 </div>
               </div>
 
-              {/* Solution 3: Adobe Stock Metadata CSV */}
+              {/* Solusi 2: Unduh CSV Metadata Adobe Stock */}
               <div
                 className="glass-card animate-fade-in"
                 style={{
-                  padding: "1.15rem",
-                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  padding: "1.25rem",
+                  border: "1px solid rgba(245, 158, 11, 0.35)",
                   background: "linear-gradient(135deg, rgba(245, 158, 11, 0.08), transparent 70%)"
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
-                  <div style={{ display: "flex", gap: "0.6rem" }}>
+                  <div style={{ display: "flex", gap: "0.75rem" }}>
                     <div
                       style={{
-                        padding: "0.4rem",
+                        padding: "0.5rem",
                         borderRadius: "var(--radius-sm)",
                         background: "rgba(245, 158, 11, 0.15)",
                         color: "#f59e0b",
                         height: "fit-content"
                       }}
                     >
-                      <FileSpreadsheet size={16} />
+                      <FileSpreadsheet size={20} />
                     </div>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700 }}>
-                          Solusi 3: Unduh CSV Metadata Adobe Stock
+                        <h4 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>
+                          Solusi 2: Unduh CSV Metadata Adobe Stock
                         </h4>
                         <span
                           style={{
                             fontSize: "0.65rem",
-                            padding: "0.1rem 0.4rem",
+                            padding: "0.1rem 0.45rem",
                             borderRadius: "4px",
                             fontWeight: 700,
                             background: "rgba(245, 158, 11, 0.2)",
                             color: "#f59e0b"
                           }}
                         >
-                          OTOMATISASI TAG & JUDUL
+                          OTOMATISASI TAG &amp; JUDUL
                         </span>
                       </div>
-                      <p style={{ margin: "0.25rem 0 0", fontSize: "0.79rem", color: "var(--text-secondary)" }}>
+                      <p style={{ margin: "0.35rem 0 0", fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
                         Format resmi Adobe Stock (<code>Filename, Title, Keywords, Category</code>). Diunggah via tombol &ldquo;Upload CSV&rdquo; di portal Adobe agar judul dan keyword terisi otomatis.
                       </p>
                     </div>
@@ -535,72 +390,19 @@ export function AdobeStockExportModal({
                   <button
                     className="btn btn-secondary btn-sm"
                     onClick={handleDownloadAdobeCsv}
-                    style={{ flexShrink: 0, gap: "0.4rem" }}
+                    disabled={count === 0}
+                    style={{
+                      flexShrink: 0,
+                      gap: "0.4rem",
+                      fontWeight: 700,
+                      padding: "0.5rem 1rem",
+                      borderColor: "rgba(245, 158, 11, 0.4)",
+                      color: "#fbbf24"
+                    }}
                   >
                     <Download size={14} style={{ color: "#f59e0b" }} />
                     <span>Unduh CSV Metadata</span>
                   </button>
-                </div>
-              </div>
-
-              {/* Solution 4: PowerShell Command */}
-              <div
-                className="glass-card animate-fade-in"
-                style={{
-                  padding: "1.15rem",
-                  border: "1px solid rgba(168, 85, 247, 0.3)",
-                  background: "linear-gradient(135deg, rgba(168, 85, 247, 0.08), transparent 70%)"
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", marginBottom: "0.6rem" }}>
-                  <div style={{ display: "flex", gap: "0.6rem" }}>
-                    <div
-                      style={{
-                        padding: "0.4rem",
-                        borderRadius: "var(--radius-sm)",
-                        background: "rgba(168, 85, 247, 0.15)",
-                        color: "#c084fc",
-                        height: "fit-content"
-                      }}
-                    >
-                      <Terminal size={16} />
-                    </div>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700 }}>
-                        Solusi 4: Script Pemilah Folder (PowerShell Windows)
-                      </h4>
-                      <p style={{ margin: "0.25rem 0 0", fontSize: "0.79rem", color: "var(--text-secondary)" }}>
-                        Jalankan 1 baris perintah ini di terminal folder foto Anda untuk menyalin {count} file lulus ke folder <code>Siap_Adobe_Stock</code>.
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => handleCopy(getPowerShellCommand(), "ps")}
-                    style={{ flexShrink: 0, gap: "0.4rem" }}
-                  >
-                    {copiedKey === "ps" ? <Check size={14} /> : <Copy size={14} />}
-                    <span>{copiedKey === "ps" ? "Perintah Disalin!" : "Salin Perintah"}</span>
-                  </button>
-                </div>
-
-                <div
-                  style={{
-                    background: "rgba(0, 0, 0, 0.35)",
-                    padding: "0.5rem 0.75rem",
-                    borderRadius: "var(--radius-sm)",
-                    fontFamily: "var(--font-mono, monospace)",
-                    fontSize: "0.72rem",
-                    color: "#c084fc",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    border: "1px solid var(--border-subtle)"
-                  }}
-                  title={getPowerShellCommand()}
-                >
-                  {getPowerShellCommand()}
                 </div>
               </div>
 
