@@ -57,27 +57,38 @@ export async function initPortfolioDb() {
 }
 
 /**
- * Generates an ultracompact (64x64) thumbnail for fast comparison without memory bloat.
+ * Generates a crisp, proportional thumbnail (up to 320px) for sharp visual representation.
  */
-export async function generateMiniThumbnail(previewUrl, size = 64) {
+export async function generateMiniThumbnail(previewUrl, maxDim = 320) {
   if (!previewUrl) return null;
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
       try {
+        let width = img.width || 320;
+        let height = img.height || 240;
+
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
         const canvas = document.createElement("canvas");
-        canvas.width = size;
-        canvas.height = size;
+        canvas.width = Math.max(1, width);
+        canvas.height = Math.max(1, height);
         const ctx = canvas.getContext("2d");
-        
-        // Center crop to square
-        const minDim = Math.min(img.width, img.height);
-        const sx = (img.width - minDim) / 2;
-        const sy = (img.height - minDim) / 2;
-        
-        ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
-        resolve(canvas.toDataURL("image/jpeg", 0.65));
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
       } catch {
         resolve(null);
       }

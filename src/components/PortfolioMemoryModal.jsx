@@ -53,6 +53,26 @@ export function PortfolioMemoryModal({
     return items.filter(item => (item.filename || "").toLowerCase().includes(q));
   }, [items, searchQuery]);
 
+  // Fast map to look up current active assets by id, hash, or filename for high-res previews
+  const currentAssetMap = useMemo(() => {
+    const map = new Map();
+    for (const a of currentAssets) {
+      if (a.id) map.set(a.id, a);
+      if (a.pHash) map.set(a.pHash, a);
+      if (a.metadata?.filename) map.set(a.metadata.filename, a);
+    }
+    return map;
+  }, [currentAssets]);
+
+  // Check how many assets in current session are NOT yet stored in memory
+  const unsavedCount = useMemo(() => {
+    if (!currentAssets || currentAssets.length === 0) return 0;
+    const savedIds = new Set(items.map(i => i.id));
+    const savedHashes = new Set(items.map(i => i.pHash));
+    const savedNames = new Set(items.map(i => i.filename));
+    return currentAssets.filter(a => !savedIds.has(a.id) && !savedHashes.has(a.pHash) && !savedNames.has(a.metadata?.filename)).length;
+  }, [currentAssets, items]);
+
   const handleSaveSession = async () => {
     if (!currentAssets || currentAssets.length === 0) return;
     setIsSavingSession(true);
@@ -136,10 +156,10 @@ export function PortfolioMemoryModal({
         className="glass-card animate-scale-up"
         onClick={(e) => e.stopPropagation()}
         style={{
-          maxWidth: "1000px",
-          width: "94vw",
-          height: "85vh",
-          maxHeight: "820px",
+          maxWidth: "1120px",
+          width: "95vw",
+          height: "90vh",
+          maxHeight: "920px",
           display: "flex",
           flexDirection: "column",
           padding: 0,
@@ -151,7 +171,7 @@ export function PortfolioMemoryModal({
         {/* Header */}
         <div
           style={{
-            padding: "1rem 1.4rem",
+            padding: "0.85rem 1.35rem",
             borderBottom: "1px solid var(--border-subtle)",
             background: "var(--bg-surface-elevated)",
             display: "flex",
@@ -213,7 +233,7 @@ export function PortfolioMemoryModal({
         {/* Stats & Information Ribbon */}
         <div
           style={{
-            padding: "0.75rem 1.4rem",
+            padding: "0.6rem 1.35rem",
             background: "rgba(124, 58, 237, 0.08)",
             borderBottom: "1px solid var(--border-subtle)",
             display: "flex",
@@ -224,19 +244,24 @@ export function PortfolioMemoryModal({
             flexShrink: 0
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", fontSize: "0.8rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "1.2rem", fontSize: "0.78rem" }}>
             <div>
               <span style={{ color: "var(--text-tertiary)" }}>Total Aset Diingat: </span>
               <strong style={{ color: "#a78bfa" }}>{items.length} Gambar</strong>
             </div>
             <div>
               <span style={{ color: "var(--text-tertiary)" }}>Database: </span>
-              <strong style={{ color: "var(--text-primary)" }}>IndexedDB (Aman di Peramban Anda)</strong>
+              <strong style={{ color: "var(--text-primary)" }}>IndexedDB (Aman Lokal)</strong>
             </div>
             <div>
               <span style={{ color: "var(--text-tertiary)" }}>Toleransi Perlindungan: </span>
               <strong style={{ color: "#10b981" }}>Mirip ≥ 73% (Threshold Hamming: 17)</strong>
             </div>
+            {currentAssets.length > 0 && unsavedCount === 0 && (
+              <span style={{ color: "#34d399", fontSize: "0.72rem", background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.3)", padding: "0.12rem 0.5rem", borderRadius: "999px", fontWeight: 600 }}>
+                ✓ {currentAssets.length} Aset Sesi Aktif Tersimpan
+              </span>
+            )}
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -322,13 +347,13 @@ export function PortfolioMemoryModal({
           </div>
         )}
 
-        {/* Active Session Sync Card */}
-        {currentAssets && currentAssets.length > 0 && (
+        {/* Active Session Sync Card (Only shown when there are unsaved assets) */}
+        {unsavedCount > 0 && (
           <div
             className="animate-fade-in"
             style={{
-              margin: "0.85rem 1.4rem 0.2rem 1.4rem",
-              padding: "0.85rem 1.2rem",
+              margin: "0.75rem 1.4rem 0.2rem 1.4rem",
+              padding: "0.75rem 1.2rem",
               borderRadius: "var(--radius-md)",
               background: "linear-gradient(135deg, rgba(124, 58, 237, 0.16), rgba(59, 130, 246, 0.16))",
               border: "1px solid rgba(167, 139, 250, 0.4)",
@@ -341,12 +366,12 @@ export function PortfolioMemoryModal({
             }}
           >
             <div>
-              <div style={{ fontWeight: 700, color: "#c4b5fd", fontSize: "0.88rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                <Zap size={15} style={{ color: "#a855f7" }} />
-                <span>Sesi Aktif Terdeteksi: {currentAssets.length} Aset Terbuka di Kurator</span>
+              <div style={{ fontWeight: 700, color: "#c4b5fd", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <Zap size={14} style={{ color: "#a855f7" }} />
+                <span>{unsavedCount} Aset Sesi Aktif Belum Masuk Memori</span>
               </div>
-              <p style={{ margin: "3px 0 0 0", fontSize: "0.78rem", color: "var(--text-secondary)" }}>
-                Simpan seluruh sidik jari visual aset yang sedang Anda buka ke dalam memori portofolio agar sesi berikutnya mendeteksi duplikat foto-foto ini.
+              <p style={{ margin: "2px 0 0 0", fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                Simpan ke memori agar sesi berikutnya otomatis mendeteksi kemiripan dan duplikat.
               </p>
             </div>
             <button
@@ -357,7 +382,7 @@ export function PortfolioMemoryModal({
                 background: "linear-gradient(135deg, #8b5cf6, #6366f1)",
                 border: "1px solid #8b5cf6",
                 fontWeight: 700,
-                padding: "0.45rem 1rem",
+                padding: "0.4rem 0.9rem",
                 display: "flex",
                 alignItems: "center",
                 gap: "0.4rem",
@@ -367,12 +392,12 @@ export function PortfolioMemoryModal({
               {isSavingSession ? (
                 <>
                   <Loader2 size={13} className="animate-spin" />
-                  <span>Menyimpan ke Memori...</span>
+                  <span>Menyimpan...</span>
                 </>
               ) : (
                 <>
                   <Database size={13} />
-                  <span>Simpan {currentAssets.length} Aset Sesi Ini</span>
+                  <span>Simpan {unsavedCount} Aset Baru</span>
                 </>
               )}
             </button>
@@ -382,7 +407,7 @@ export function PortfolioMemoryModal({
         {/* Search Bar */}
         <div
           style={{
-            padding: "0.75rem 1.4rem",
+            padding: "0.6rem 1.4rem",
             borderBottom: "1px solid var(--border-subtle)",
             background: "var(--bg-surface)",
             display: "flex",
@@ -437,11 +462,12 @@ export function PortfolioMemoryModal({
         {/* Gallery / Asset Cards Grid */}
         <div
           style={{
-            flex: 1,
+            flex: "1 1 0%",
+            minHeight: 0,
             overflowY: "auto",
-            padding: "1.2rem 1.4rem",
+            padding: "1rem 1.4rem",
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(215px, 1fr))",
             gap: "1rem",
             alignContent: "start"
           }}
@@ -474,84 +500,89 @@ export function PortfolioMemoryModal({
               </p>
             </div>
           ) : (
-            filteredItems.map((item) => (
-              <div
-                key={item.id}
-                className="glass-card animate-fade-in"
-                style={{
-                  padding: "0.75rem",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.6rem",
-                  border: "1px solid var(--border-subtle)",
-                  position: "relative",
-                  borderRadius: "var(--radius-md)",
-                  background: "var(--bg-surface-elevated)"
-                }}
-              >
-                {/* Thumbnail Preview */}
+            filteredItems.map((item) => {
+              const matchedCurrent = currentAssetMap.get(item.id) || currentAssetMap.get(item.pHash) || currentAssetMap.get(item.filename);
+              const displayThumbnail = matchedCurrent?.metadata?.previewUrl || item.thumbnail;
+
+              return (
                 <div
+                  key={item.id}
+                  className="glass-card animate-fade-in"
                   style={{
-                    width: "100%",
-                    height: "120px",
-                    borderRadius: "var(--radius-sm)",
-                    background: "rgba(0,0,0,0.4)",
-                    overflow: "hidden",
+                    padding: "0.65rem",
                     display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    position: "relative"
+                    flexDirection: "column",
+                    gap: "0.55rem",
+                    border: "1px solid var(--border-subtle)",
+                    position: "relative",
+                    borderRadius: "var(--radius-md)",
+                    background: "var(--bg-surface-elevated)"
                   }}
                 >
-                  {item.thumbnail ? (
-                    <img
-                      src={item.thumbnail}
-                      alt={item.filename}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  ) : (
-                    <FileImage size={28} style={{ color: "var(--text-tertiary)" }} />
-                  )}
-
-                  {/* Format & Megapixels Pill */}
-                  <span
+                  {/* Thumbnail Preview */}
+                  <div
                     style={{
-                      position: "absolute",
-                      bottom: "5px",
-                      left: "5px",
-                      background: "rgba(0, 0, 0, 0.75)",
-                      color: "#38bdf8",
-                      fontSize: "0.65rem",
-                      fontWeight: 700,
-                      padding: "0.1rem 0.35rem",
-                      borderRadius: "3px",
+                      width: "100%",
+                      height: "140px",
+                      borderRadius: "var(--radius-sm)",
+                      background: "#080c14",
+                      overflow: "hidden",
                       display: "flex",
                       alignItems: "center",
-                      gap: "2px"
+                      justifyContent: "center",
+                      position: "relative"
                     }}
                   >
-                    <Zap size={9} />
-                    {item.megapixels ? `${item.megapixels.toFixed(1)} MP` : item.format || "IMG"}
-                  </span>
+                    {displayThumbnail ? (
+                      <img
+                        src={displayThumbnail}
+                        alt={item.filename}
+                        loading="lazy"
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <FileImage size={28} style={{ color: "var(--text-tertiary)" }} />
+                    )}
 
-                  {item.isChampion && (
+                    {/* Format & Megapixels Pill */}
                     <span
                       style={{
                         position: "absolute",
-                        top: "5px",
-                        right: "5px",
-                        background: "#10b981",
-                        color: "#ffffff",
-                        fontSize: "0.62rem",
-                        fontWeight: 800,
-                        padding: "0.1rem 0.35rem",
-                        borderRadius: "3px"
+                        bottom: "6px",
+                        left: "6px",
+                        background: "rgba(0, 0, 0, 0.8)",
+                        color: "#38bdf8",
+                        fontSize: "0.65rem",
+                        fontWeight: 700,
+                        padding: "0.12rem 0.4rem",
+                        borderRadius: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "3px"
                       }}
                     >
-                      🏆 Champion
+                      <Zap size={9} />
+                      {item.megapixels ? `${item.megapixels.toFixed(1)} MP` : item.format || "IMG"}
                     </span>
-                  )}
-                </div>
+
+                    {item.isChampion && (
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: "6px",
+                          right: "6px",
+                          background: "#10b981",
+                          color: "#ffffff",
+                          fontSize: "0.62rem",
+                          fontWeight: 800,
+                          padding: "0.12rem 0.4rem",
+                          borderRadius: "4px"
+                        }}
+                      >
+                        🏆 Champion
+                      </span>
+                    )}
+                  </div>
 
                 {/* Filename & Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -618,7 +649,8 @@ export function PortfolioMemoryModal({
                   </button>
                 </div>
               </div>
-            ))
+            );
+          })
           )}
         </div>
 
